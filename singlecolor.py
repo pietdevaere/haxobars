@@ -24,7 +24,7 @@ if __name__ == "__main__":
   ##      bars.send([universe])
   ##      sleep(0.1)
 
-        universe = [[50, 255, 50, 255, 255, 0]]*50 ## idle blue
+        universe = [[50, 255, 20, 255, 255, 0]]*50 ## idle blue
         bars.send(universe)
                 
 
