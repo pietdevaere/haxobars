@@ -28,11 +28,6 @@ class Sender:
         send(paquete, verbose=0)
 
 
-
-# universe = [ 255,255,64, 255,255,64, 255,255,64, 255,255,64 ]
-universe = [ 255,172,0, 255,172,0, 255,172,0, 255,172,0 ]
-
-
 if __name__ == "__main__":
     bars = Sender('31.22.122.55')
 
