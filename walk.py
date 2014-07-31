@@ -13,9 +13,9 @@ if __name__ == "__main__":
 
     while True:
         for y in range(0,1):
-            for j in range(0,19):
+            for j in range(0,20):
                 array=[]
-                for i in range(0,19):
+                for i in range(0,20):
                     if i%10 == j%10:
                         array.append([0,0,255,0,255,0])
                     else:
@@ -24,13 +24,13 @@ if __name__ == "__main__":
                 sleep(0.1)
         for x in range(0,3):
             array=[]
-            for j in range(0,19):
+            for j in range(0,20):
                 array.append([0,0,255,0,255,0])
             bars.send(array)
             sleep(0.1)
 
             array=[]
-            for j in range(0,19):
+            for j in range(0,20):
                 array.append([255,0,0,0,255,0])
             bars.send(array)
             sleep(0.1)
