@@ -7,7 +7,7 @@ from time import sleep
 universe = [ 255,172,0, 255,172,0, 255,172,0, 255,172,0 ]
 
 def sendValues(array):
-        ip=IP(dst='31.22.122.55',src='31.22.122.24')
+        ip=IP(dst='31.22.122.55',src='31.22.122.194')
         udp=UDP(sport=6454,dport=6454)
 
         artnet=ArtNet()
@@ -38,7 +38,7 @@ def sendValues(array):
 
 if __name__ == "__main__":
     while True:
-        for y in range(0,100):
+        for y in range(0,1):
             for j in range(0,19):
                 array=[]
                 for i in range(0,19):
@@ -48,17 +48,18 @@ if __name__ == "__main__":
                         array.append([255,0,0,0,255,0])
                 sendValues(array)
                 sleep(0.1)
-        for x in range(0,2):
+        for x in range(0,3):
             array=[]
             for j in range(0,19):
                 array.append([0,0,255,0,255,0])
             sendValues(array)
             sleep(0.1)
 
+            array=[]
             for j in range(0,19):
                 array.append([255,0,0,0,255,0])
             sendValues(array)
-            sleep(0.4)
+            sleep(0.1)
                 
 
                 
