@@ -38,14 +38,27 @@ def sendValues(array):
 
 if __name__ == "__main__":
     while True:
-        for j in range(0,19):
+        for y in range(0,100):
+            for j in range(0,19):
+                array=[]
+                for i in range(0,19):
+                    if i%10 == j%10:
+                        array.append([0,0,255,0,255,0])
+                    else:
+                        array.append([255,0,0,0,255,0])
+                sendValues(array)
+                sleep(0.1)
+        for x in range(0,2):
             array=[]
-            for i in range(0,19):
-                if i%10 == j%10:
-                    array.append([0,0,255,0,255,0])
-                else:
-                    array.append([255,0,0,0,255,0])
+            for j in range(0,19):
+                array.append([0,0,255,0,255,0])
             sendValues(array)
-            sleep(0.05)
+            sleep(0.1)
+
+            for j in range(0,19):
+                array.append([255,0,0,0,255,0])
+            sendValues(array)
+            sleep(0.4)
+                
 
                 
