@@ -5,10 +5,12 @@ from time import sleep
 from random import randrange
 
 class Effect:
+    """Special effect superclass"""
     def __init__(self, kind):
         self.kind = kind
 
 class Dimmer(Effect):
+    """Make a light fade slowely to the targets"""
     def __init__(self, light, bank = None, targets = None, speed = 1):
         Effect.__init__(self, 'dimmer')
         self.light = light
@@ -25,6 +27,19 @@ class Dimmer(Effect):
     def set_speed(self, speed):
         self.speed = speed
 
+    def do(self):
+        if self.light.kind == 'bar':
+            vals = self.light.read_block(self.bank)
+            done = 1
+            for i in range(min(len(vals), len(self.targets))):
+                if vals[i] < self.targets[i]:
+                    vals[i] += 1
+                elif vals[i] > self.targets[i]:
+                    vals[i] -= 1
+                if vals[i] != self.targets[i]:
+                    done = 0
+            self.light.rgba(vals, self.bank)
+            return done
 
 class Mapper:
     def __init__(self):
@@ -142,6 +157,8 @@ class Camp:
         finished = []
         for soft in self.effects.keys():
             effect = self.effects[soft]
+            done = effect.do()
+            """
             if effect.kind == 'dimmer':
                 vals = self.read_light(soft)
                 done = 1
@@ -153,9 +170,10 @@ class Camp:
                     if vals[i] != effect.targets[i]:
                         done = 0
                 self.set_light(soft, vals)
-                if done == 1:
-                    del self.effects[soft]
-                    finished.append((soft, effect))
+            """
+            if done == 1:
+                del self.effects[soft]
+                finished.append((soft, effect))
         return finished
                 
 
