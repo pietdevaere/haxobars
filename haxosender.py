@@ -2,6 +2,7 @@ from artdmx import ArtNet, ArtDMX
 from scapy.all import *
 from itertools import chain
 from time import sleep
+from random import randrange
 
 class Effect:
     def __init__(self, kind):
@@ -23,8 +24,6 @@ class Dimmer(Effect):
 
     def set_speed(self, speed):
         self.speed = speed
-
-    def random(self):
 
 
 class Mapper:
@@ -121,6 +120,17 @@ class Camp:
         light, bank = self.resTable.lookup(soft)
         newDimmer = Dimmer(light, bank)
         self.effects[soft] = newDimmer
+
+    def random_dimmer(self, soft):
+        light, bank = self.resTable.lookup(soft)
+        newDimmer = Dimmer(light, bank)
+        self.effects[soft] = newDimmer
+        if light.kind == 'bar':
+            targets = []
+            for i in range(4):
+                targets.append(randrange(0,256))
+            self.set_dimmer_target(soft, targets)
+
         
     def set_dimmer_target(self, soft, targets):
         self.effects[soft].set_targets(targets)
@@ -196,19 +206,37 @@ if __name__ == "melons":
     camp.set_light(14, (0, 255, 0, 0))
     camp.transmit()
 
+if __name__ == "boobs":
+    camp = Camp("31.22.123.224")
+    for i in range(20):
+        camp.add_light('bar', 1 + i*19, i*4)
+
+    while True:
+        for soft in range(80):
+            camp.set_light(soft, (255, 0, 0, 0))
+        camp.transmit()
+        sleep(0.01)
+        
+        for soft in range(80):
+            camp.set_light(soft, (0, 0, 255, 0))
+        camp.transmit()
+        sleep(0.01)
 
 if __name__ == "__main__":
     camp = Camp("31.22.123.224")
     for i in range(20):
         camp.add_light('bar', 1 + i*19, i*4)
 
-    camp.add_dimmer(16)
-    camp.set_dimmer_target(16, (0, 255, 0, 0))
+    for soft in range(80):
+        camp.random_dimmer(soft)
     while True:
         camp.transmit()
         done = camp.do_effects()
         sleep(0.1)
         if done != []:
+            for effect in done:
+                camp.random_dimmer(effect[0])
+                print 'restarted', effect[0]
 
 
 if __name__ == "tits":
