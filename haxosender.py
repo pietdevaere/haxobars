@@ -27,17 +27,28 @@ class Sender:
         self.artnet=ArtNet()
         self.artdmx = ArtDMX()
 
-    def send(self, array):
-        flatValues=list(itertools.chain.from_iterable(array));
+        self.fake = False
+
+    def send(self, array, flatten=False):
+        if self.fake:
+            print array
+
+        if flatten:
+            flatValues=list(itertools.chain.from_iterable(array));
+        else:
+            flatValues=array
+
         self.artdmx.setfieldval("length", len(flatValues))
         dmxarray=[]
+
         for i in range(len(flatValues)):
             dmxarray.append(chr(int(hex(flatValues[i]),16)))
 
         payload=''.join(dmxarray)
         paquete=self.ip/self.udp/self.artnet/self.artdmx/payload
 
-        send(paquete, verbose=0)
+        if not self.fake:
+            send(paquete, verbose=0)
 
 
 if __name__ == "__main__":
