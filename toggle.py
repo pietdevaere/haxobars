@@ -15,10 +15,14 @@ if __name__ == "__main__":
             camp.add_light('bar', 1 + i*19, i*4)
         
         camp.add_light('eurospot', 381, 80)
+        camp.add_light('parl40', 387, 81)
+        camp.add_light('parl40', 393, 82)
 
         for i in range(80):
             camp.set_light(i, green)
 
         camp.set_light(80, (0, 255, 0))
+        camp.set_light(81, (255, 0, 0, 0))
+        camp.set_light(82, (0, 0, 255, 0))
         camp.transmit()
-        sleep(5)
+        sleep(1)

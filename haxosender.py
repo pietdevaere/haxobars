@@ -77,6 +77,18 @@ class Light:
     def __repr__(self):
         return(str(self.values))
 
+class Parl40(Light):
+    """Class for the eurspots above the infodesk"""
+    channel_map = ('dimmer', 'red', 'green', 'blue', 'white', 'strobe')
+    def default_values(self):
+        return [255, 255, 255, 255, 255, 0]
+    def __init__(self, adr):
+        Light.__init__(self, adr, 6, 'parl40')
+        self.values = self.default_values()
+
+    def rgbw(self, mix):
+        self.values[1:6] = mix
+
 class Eurospot(Light):
     """Class for the eurospott of bernadski"""
     channel_map = ('R', 'G', 'B', 'MACRO', 'speed/strobe', 'MODE')
@@ -165,10 +177,17 @@ class Camp:
             newLight = City(adr)
             self.lights.add(newLight)
             self.resTable.add(soft, newLight)
+        
         elif kind == 'eurospot':
             newLight = Eurospot(adr)
             self.lights.add(newLight)
             self.resTable.add(soft, newLight)
+        
+        elif kind ==  'parl40':
+            newLight = Parl40(adr)
+            self.lights.add(newLight)
+            self.resTable.add(soft, newLight)
+        
         return newLight
     
     def add_dimmer(self, soft):
@@ -223,6 +242,8 @@ class Camp:
             light.set_strobe(val)
         elif light.kind == 'eurospot':
             light.rgb(val)
+        elif light.kind == 'parl40':
+            light.rgbw(val)
 
     def find_light(self, soft):
         """return the adress and bank of a given softadress"""
