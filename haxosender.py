@@ -3,6 +3,18 @@ from scapy.all import *
 from itertools import chain
 from time import sleep
 
+"""class Light:
+    def __init__(self, adr, width):
+        self.adr = adr
+        self.width = width
+
+class Bar(Light):
+    def __init__(self, adr, width=19):
+"""
+
+
+
+
 class Sender:
     def __init__(self, dst, port =6454):
         self.dst = dst
