@@ -7,7 +7,7 @@ class Mapper:
     def __init__(self):
         self.table = {}
 
-    def add(self, soft, bar, block):
+    def add(self, soft, bar, block = None):
         self.table[soft] = [bar, block]
 
     def lookup(self, soft):
@@ -20,6 +20,17 @@ class Light:
         self.kind = kind
         self.values = [0 for i in range(width)]
 
+    def __repr__(self):
+        return(str(self.values))
+
+class City(Light):
+    def __init__(self, adr):
+        Light.__init__(self, adr, 10, 'city')
+        self.values = [255, 0, 0, 0, 255, 0, 0, 0, 0, 0]
+
+    def set_strobe(self, val):
+        self.values[7] = val
+    
 
 class Bar(Light):
     def __init__(self, adr, width=19):
@@ -29,10 +40,6 @@ class Bar(Light):
                        125, 125, 125, 125,
                        125, 125, 125, 125, 
                        125, 125, 125, 125]
-
-    def __repr__(self):
-        return(str(self.values))
-
 
 
     def rgba(self, rgbaArray, block = None):
@@ -71,11 +78,18 @@ class Camp:
             self.lights.add(newLight)
             for i in range(4):
                 self.resTable.add(soft + i, newLight, i)
+        elif kind == 'city':
+            newLight = City(adr)
+            self.lights.add(newLight)
+            self.resTable.add(soft, newLight)
         return newLight
     
-    def set_light(self, soft, rgba):
+    def set_light(self, soft, val):
         light, block = self.resTable.lookup(soft)
-        light.rgba(rgba, block)
+        if light.kind == 'bar':
+            light.rgba(val, block)
+        elif light.kind == 'city':
+            light.set_strobe(val)
 
     def find_light(self, soft):
         return self.resTable.lookup(soft)
@@ -92,7 +106,7 @@ class Camp:
         universe = [0 for i in range(self.size)]
         for light in self.lights:
             universe[light.adr - 1: light.adr - 1 + light.width] = light.values
-
+   ##     print universe
         self.artdmx.setfieldval("length", len(universe))
         dmxarray=[]
         for i in range(len(universe)):
@@ -105,23 +119,37 @@ class Camp:
 
 
 if __name__ == "__main__":
+
     camp = Camp('31.22.122.55')
     for i in range(20):
         newLight = camp.add_light('bar', 1 + i*19, i*4)
+    
     k=0
     while True:
-        for j in range(20):
-            for light in camp.lights:
-                light.rgba((0, 0, 255, 0))
-            for i in range(80):
-                if i % 20 == j:
-                    camp.set_light(i, (127, 0, 255, 0))
-                    camp.set_light((i+1)%80, (255,0,0,0))
-                    camp.set_light((i+2)%80, (255,0,0,0))
-                    camp.set_light((i+3)%80, (127,0,255,0))
+        for k in range(2):
+            for j in range(20):
+                for light in camp.lights:
+                    if light.kind != 'bar':
+                        continue
+                    light.rgba((0, 0, 255, 0))
+                for i in range(80):
+                    if i % 20 == j:
+                        camp.set_light(i, (127, 0, 255, 0))
+                        camp.set_light((i+1)%80, (255,0,0,0))
+                        camp.set_light((i+2)%80, (255,0,0,0))
+                        camp.set_light((i+3)%80, (127,0,255,0))
+                camp.transmit()
+                sleep(0.005)
+  ##      while True:
+        for k in range(3):
+            for j in range(80):
+                camp.set_light(j, (255, 255, 255, 255))
             camp.transmit()
-            sleep(0.005)
-        
+            sleep(0.025)
+            for j in range(80):
+                camp.set_light(j, (0, 0, 0, 0))
+            camp.transmit()
+            sleep(0.025)
 
 
 
