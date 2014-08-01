@@ -1,62 +1,34 @@
-from artdmx import ArtNet, ArtDMX
-from scapy.all import *
-from itertools import chain
-from time import sleep
-from haxosender import Sender
-
-# universe = [ 255,255,64, 255,255,64, 255,255,64, 255,255,64 ]
-universe = [ 255,172,0, 255,172,0, 255,172,0, 255,172,0 ]
-
-#   br  fl rgba rgba rgba
-#12 255 0 
-
-def unroll(array):
-    outArray=[]
-    for i in range(len(array)/4):
-        if i%4==0:
-            outArray.extend([12,255,0])
-        outArray.extend(array[i*4:((i+1)*4)])
-    #print "--"
-    #print outArray
-    return outArray
-
-bgColor = [0,0,255,0]
-fgColor = [255,0,0,0]
-#fgColor = [0,0,0,0]
-#bgColor = [255,255,255,0]
+from haxosender import *
 
 if __name__ == "__main__":
-    bars = Sender('31.22.122.55')
-    bars.fake = False
 
-    numSegments = 80
+    camp = Camp('31.22.123.224')
+    for i in range(20):
+        newLight = camp.add_light('bar', 1 + i*19, i*4)
 
-    blink = True
-
+    k=0
     while True:
-        for y in range(0,1):
-            for j in range(0,numSegments):
-                array=[]
-                for i in range(0,numSegments):
-                    if i%20 == j%20:
-                        array.extend(bgColor)
-                    else:
-                        array.extend(fgColor)
-                bars.send(unroll(array))
-                sleep(0.05)
-        if blink:
-            for x in range(0,3):
-                array=[]
-                for j in range(0,numSegments):
-                    array.extend(bgColor)
-                bars.send(unroll(array))
-                sleep(0.1)
-
-                array=[]
-                for j in range(0,numSegments):
-                    array.extend(fgColor)
-                bars.send(unroll(array))
-                sleep(0.1)
-                    
-
-                
+        for k in range(2):
+            for j in range(20):
+                for light in camp.lights:
+                    if light.kind != 'bar':
+                        continue
+                    light.rgba((0, 0, 255, 0))
+                for i in range(80):
+                    if i % 20 == j:
+                        camp.set_light(i, (127, 0, 255, 0))
+                        camp.set_light((i+1)%80, (255,0,0,0))
+                        camp.set_light((i+2)%80, (255,0,0,0))
+                        camp.set_light((i+3)%80, (127,0,255,0))
+                camp.transmit()
+                sleep(0.005)
+  ##      while True:
+        for k in range(3):
+            for j in range(80):
+                camp.set_light(j, (255, 255, 255, 255))
+            camp.transmit()
+            sleep(0.025)
+            for j in range(80):
+                camp.set_light(j, (0, 0, 0, 0))
+            camp.transmit()
+            sleep(0.025)
