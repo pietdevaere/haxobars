@@ -12,9 +12,11 @@ class Effect:
 class Dimmer(Effect):
     """Make a light fade slowely to the targets"""
     def __init__(self, light, bank = None, targets = None, speed = 1):
+        """Set up a dimmer"""
         Effect.__init__(self, 'dimmer')
         self.light = light
         self.speed = speed
+        self.counter = 0
         self.bank = bank
         if targets == None:
             self.targets = self.light.default_values()
@@ -22,36 +24,50 @@ class Dimmer(Effect):
             self.targets = targets
     
     def set_targets(self, targets):
+        """Set the values the channels should fade to"""
         self.targets = targets
 
     def set_speed(self, speed):
+        """Set the speed of the effect, the higher the speed, the slower the effect"""
         self.speed = speed
 
     def do(self):
-        if self.light.kind == 'bar':
-            vals = self.light.read_block(self.bank)
-            done = 1
-            for i in range(min(len(vals), len(self.targets))):
-                if vals[i] < self.targets[i]:
-                    vals[i] += 1
-                elif vals[i] > self.targets[i]:
-                    vals[i] -= 1
-                if vals[i] != self.targets[i]:
-                    done = 0
-            self.light.rgba(vals, self.bank)
-            return done
+        """Perform one step of fading
+        returns 1 if the fading is done (eg. the targets are reached)
+        returns 0 otherwise"""
+        self.counter += 1
+        if self.counter >= self.speed:
+            self.counter = 0
+            if self.light.kind == 'bar':
+                vals = self.light.read_block(self.bank)
+                done = 1
+                for i in range(min(len(vals), len(self.targets))):
+                    if vals[i] < self.targets[i]:
+                        vals[i] += 1
+                    elif vals[i] > self.targets[i]:
+                        vals[i] -= 1
+                    if vals[i] != self.targets[i]:
+                        done = 0
+                self.light.rgba(vals, self.bank)
+                return done
 
 class Mapper:
+    """Map soft adresses to dmx base adresses and banks"""
     def __init__(self):
+        """Generate an emtpy table on initialisation"""
         self.table = {}
 
-    def add(self, soft, bar, block = None):
-        self.table[soft] = [bar, block]
+    def add(self, soft, adr, block = None):
+        """Add an element the the table"""
+        self.table[soft] = [adr, block]
 
     def lookup(self, soft):
+        """Do a forward lookup
+        Find the dmx base adress and block of a given softadress"""
         return self.table[soft]
 
 class Light:
+    """Superclass for the different type of lights"""
     def __init__(self, adr, width, kind = None):
         self.adr = adr
         self.width = width
@@ -62,6 +78,7 @@ class Light:
         return(str(self.values))
 
 class City(Light):
+    """Class for the city floodlights"""
     def default_values(self):
         return [255, 0, 0, 0, 255, 0, 0, 0, 0, 0]
     def __init__(self, adr):
@@ -73,6 +90,7 @@ class City(Light):
     
 
 class Bar(Light):
+    """Class for the bar lights"""
     def default_values(self):
         return  [12, 255, 0,
                 125, 125, 125, 125,
@@ -86,6 +104,8 @@ class Bar(Light):
 
 
     def rgba(self, rgbaArray, block = None):
+        """Set the given block of the light to the given rgba code
+        will set all blocks if no block is specified"""
         assert len(rgbaArray) == 4
         if block == None:
             for i in range(4):
@@ -94,9 +114,11 @@ class Bar(Light):
             self.values[3 + 4*block: 3 + 4*block + 4] = rgbaArray
 
     def read_block(self, block):
+        """Read back the value of a block"""
         return self.values[3 + 4*block: 3 + 4*block + 4]
 
 class Camp:
+    """Superclass for the controller, keeps track of all the lights and effects"""
     def __init__(self, dst, port = 6454):
         self.lights = set()
         self.effects = {}
@@ -120,6 +142,7 @@ class Camp:
         return result
 
     def add_light(self, kind, adr, soft):
+        """Add a light to the camp"""
         if kind == 'bar':
             newLight = Bar(adr)
             self.lights.add(newLight)
@@ -132,11 +155,13 @@ class Camp:
         return newLight
     
     def add_dimmer(self, soft):
+        """Add a dimmer to the camp"""
         light, bank = self.resTable.lookup(soft)
         newDimmer = Dimmer(light, bank)
         self.effects[soft] = newDimmer
 
     def random_dimmer(self, soft):
+        """Generate a dimmer to fade to a random value"""
         light, bank = self.resTable.lookup(soft)
         newDimmer = Dimmer(light, bank)
         self.effects[soft] = newDimmer
@@ -154,23 +179,11 @@ class Camp:
         self.effects[soft].set_speed(speed)
 
     def do_effects(self):
+        """execute all the effects once"""
         finished = []
         for soft in self.effects.keys():
             effect = self.effects[soft]
             done = effect.do()
-            """
-            if effect.kind == 'dimmer':
-                vals = self.read_light(soft)
-                done = 1
-                for i in range(min(len(vals), len(effect.targets))):
-                    if vals[i] < effect.targets[i]:
-                        vals[i] += 1
-                    elif vals[i] > effect.targets[i]:
-                        vals[i] -= 1
-                    if vals[i] != effect.targets[i]:
-                        done = 0
-                self.set_light(soft, vals)
-            """
             if done == 1:
                 del self.effects[soft]
                 finished.append((soft, effect))
@@ -178,12 +191,14 @@ class Camp:
                 
 
     def read_light(self, soft):
+        """read back the current state of a given light"""
         light, block = self.resTable.lookup(soft)
         if light.kind == 'bar':
             return light.read_block(block)
 
 
     def set_light(self, soft, val):
+        """set the given softadress to the given collorvalue"""
         light, block = self.resTable.lookup(soft)
         if light.kind == 'bar':
             light.rgba(val, block)
@@ -191,16 +206,17 @@ class Camp:
             light.set_strobe(val)
 
     def find_light(self, soft):
+        """return the adress and bank of a given softadress"""
         return self.resTable.lookup(soft)
 
     def get_size(self):
+        """calculate the size of the universe"""
         for light in self.lights:
             if light.adr + light.width > self.size:
                 self.size = light.adr + light.width
-    
-
 
     def transmit(self):
+        """Create the dmx data, and send out the universe"""
         self.get_size()
         universe = [0 for i in range(self.size)]
         for light in self.lights:
@@ -215,84 +231,8 @@ class Camp:
 
         send(paquete, verbose=0)
 
-if __name__ == "melons":
-
-    camp = Camp("31.22.123.224")
-    for i in range(20):
-        camp.add_light('bar', 1 + i*19, i*4)
-
-    camp.set_light(14, (0, 255, 0, 0))
-    camp.transmit()
-
-if __name__ == "boobs":
-    camp = Camp("31.22.123.224")
-    for i in range(20):
-        camp.add_light('bar', 1 + i*19, i*4)
-
-    while True:
-        for soft in range(80):
-            camp.set_light(soft, (255, 0, 0, 0))
-        camp.transmit()
-        sleep(0.01)
-        
-        for soft in range(80):
-            camp.set_light(soft, (0, 0, 255, 0))
-        camp.transmit()
-        sleep(0.01)
-
-if __name__ == "__main__":
-    camp = Camp("31.22.123.224")
-    for i in range(20):
-        camp.add_light('bar', 1 + i*19, i*4)
-
-    for soft in range(80):
-        camp.random_dimmer(soft)
-    while True:
-        camp.transmit()
-        done = camp.do_effects()
-        sleep(0.1)
-        if done != []:
-            for effect in done:
-                camp.random_dimmer(effect[0])
-                print 'restarted', effect[0]
-
-
-if __name__ == "tits":
-
-    camp = Camp('31.22.123.224')
-    for i in range(20):
-        newLight = camp.add_light('bar', 1 + i*19, i*4)
-
-    k=0
-    while True:
-        for k in range(2):
-            for j in range(20):
-                for light in camp.lights:
-                    if light.kind != 'bar':
-                        continue
-                    light.rgba((0, 0, 255, 0))
-                for i in range(80):
-                    if i % 20 == j:
-                        camp.set_light(i, (127, 0, 255, 0))
-                        camp.set_light((i+1)%80, (255,0,0,0))
-                        camp.set_light((i+2)%80, (255,0,0,0))
-                        camp.set_light((i+3)%80, (127,0,255,0))
-                camp.transmit()
-                sleep(0.005)
-  ##      while True:
-        for k in range(3):
-            for j in range(80):
-                camp.set_light(j, (255, 255, 255, 255))
-            camp.transmit()
-            sleep(0.025)
-            for j in range(80):
-                camp.set_light(j, (0, 0, 0, 0))
-            camp.transmit()
-            sleep(0.025)
-
-
-
 class Sender:
+    """Simple class to send basic dmx packages"""
     def __init__(self, dst, port =6454):
         self.dst = dst
         self.src = '1.2.3.4'
