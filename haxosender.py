@@ -3,6 +3,30 @@ from scapy.all import *
 from itertools import chain
 from time import sleep
 
+class Effect:
+    def __init__(self, kind):
+        self.kind = kind
+
+class Dimmer(Effect):
+    def __init__(self, light, bank = None, targets = None, speed = 1):
+        Effect.__init__(self, 'dimmer')
+        self.light = light
+        self.speed = speed
+        self.bank = bank
+        if targets == None:
+            self.targets = self.light.default_values()
+        else:
+            self.targets = targets
+    
+    def set_targets(self, targets):
+        self.targets = targets
+
+    def set_speed(self, speed):
+        self.speed = speed
+
+    def random(self):
+
+
 class Mapper:
     def __init__(self):
         self.table = {}
@@ -24,22 +48,27 @@ class Light:
         return(str(self.values))
 
 class City(Light):
+    def default_values(self):
+        return [255, 0, 0, 0, 255, 0, 0, 0, 0, 0]
     def __init__(self, adr):
         Light.__init__(self, adr, 10, 'city')
-        self.values = [255, 0, 0, 0, 255, 0, 0, 0, 0, 0]
-
+        self.values = self.default_values()
+ 
     def set_strobe(self, val):
         self.values[7] = val
     
 
 class Bar(Light):
+    def default_values(self):
+        return  [12, 255, 0,
+                125, 125, 125, 125,
+                125, 125, 125, 125,
+                125, 125, 125, 125,
+                125, 125, 125, 125]
+
     def __init__(self, adr, width=19):
         Light.__init__(self, adr, width, 'bar')
-        self.values = [12, 255, 0,
-                       125, 125, 125, 125,
-                       125, 125, 125, 125,
-                       125, 125, 125, 125, 
-                       125, 125, 125, 125]
+        self.values = self.default_values()
 
 
     def rgba(self, rgbaArray, block = None):
@@ -50,9 +79,13 @@ class Bar(Light):
         else:
             self.values[3 + 4*block: 3 + 4*block + 4] = rgbaArray
 
+    def read_block(self, block):
+        return self.values[3 + 4*block: 3 + 4*block + 4]
+
 class Camp:
     def __init__(self, dst, port = 6454):
         self.lights = set()
+        self.effects = {}
         self.resTable = Mapper()
         self.size = 0
         
@@ -84,6 +117,44 @@ class Camp:
             self.resTable.add(soft, newLight)
         return newLight
     
+    def add_dimmer(self, soft):
+        light, bank = self.resTable.lookup(soft)
+        newDimmer = Dimmer(light, bank)
+        self.effects[soft] = newDimmer
+        
+    def set_dimmer_target(self, soft, targets):
+        self.effects[soft].set_targets(targets)
+
+    def set_dimmer_speed(self, soft, speed):
+        self.effects[soft].set_speed(speed)
+
+    def do_effects(self):
+        finished = []
+        for soft in self.effects.keys():
+            effect = self.effects[soft]
+            if effect.kind == 'dimmer':
+                vals = self.read_light(soft)
+                done = 1
+                for i in range(min(len(vals), len(effect.targets))):
+                    if vals[i] < effect.targets[i]:
+                        vals[i] += 1
+                    elif vals[i] > effect.targets[i]:
+                        vals[i] -= 1
+                    if vals[i] != effect.targets[i]:
+                        done = 0
+                self.set_light(soft, vals)
+                if done == 1:
+                    del self.effects[soft]
+                    finished.append((soft, effect))
+        return finished
+                
+
+    def read_light(self, soft):
+        light, block = self.resTable.lookup(soft)
+        if light.kind == 'bar':
+            return light.read_block(block)
+
+
     def set_light(self, soft, val):
         light, block = self.resTable.lookup(soft)
         if light.kind == 'bar':
@@ -106,7 +177,6 @@ class Camp:
         universe = [0 for i in range(self.size)]
         for light in self.lights:
             universe[light.adr - 1: light.adr - 1 + light.width] = light.values
-   ##     print universe
         self.artdmx.setfieldval("length", len(universe))
         dmxarray=[]
         for i in range(len(universe)):
@@ -117,13 +187,36 @@ class Camp:
 
         send(paquete, verbose=0)
 
+if __name__ == "melons":
+
+    camp = Camp("31.22.123.224")
+    for i in range(20):
+        camp.add_light('bar', 1 + i*19, i*4)
+
+    camp.set_light(14, (0, 255, 0, 0))
+    camp.transmit()
+
 
 if __name__ == "__main__":
+    camp = Camp("31.22.123.224")
+    for i in range(20):
+        camp.add_light('bar', 1 + i*19, i*4)
 
-    camp = Camp('31.22.122.55')
+    camp.add_dimmer(16)
+    camp.set_dimmer_target(16, (0, 255, 0, 0))
+    while True:
+        camp.transmit()
+        done = camp.do_effects()
+        sleep(0.1)
+        if done != []:
+
+
+if __name__ == "tits":
+
+    camp = Camp('31.22.123.224')
     for i in range(20):
         newLight = camp.add_light('bar', 1 + i*19, i*4)
-    
+
     k=0
     while True:
         for k in range(2):
@@ -150,7 +243,6 @@ if __name__ == "__main__":
                 camp.set_light(j, (0, 0, 0, 0))
             camp.transmit()
             sleep(0.025)
-
 
 
 
