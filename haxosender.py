@@ -39,7 +39,7 @@ class Bar(Light):
         assert len(rgbaArray) == 4
         if block == None:
             for i in range(4):
-                rgba(rgbaArray, i)
+                self.rgba(rgbaArray, i)
         else:
             self.values[3 + 4*block: 3 + 4*block + 4] = rgbaArray
 
@@ -71,6 +71,7 @@ class Camp:
             self.lights.add(newLight)
             for i in range(4):
                 self.resTable.add(soft + i, newLight, i)
+        return newLight
     
     def set_light(self, soft, rgba):
         light, block = self.resTable.lookup(soft)
@@ -104,13 +105,19 @@ class Camp:
 
 
 if __name__ == "__main__":
-    testje = Camp('31.22.122.55')
-    testje.add_light('bar', 1, 1)
-    testje.set_light(4, (255, 255, 0, 0))
-    testje.transmit()
-    print(testje)
-    print(testje.find_light(1)[0])
-    
+    camp = Camp('31.22.122.55')
+    for i in range(20):
+        newLight = camp.add_light('bar', 1 + i*19, i*4)
+    while True:
+        for j in range(20):
+            for light in camp.lights:
+                light.rgba((0, 0, 255, 0))
+            for i in range(80):
+                if i % 20 == j:
+                    camp.set_light(i, (255, 0, 0, 0))
+            camp.transmit()
+            sleep(0.01)
+        
 
 
 
